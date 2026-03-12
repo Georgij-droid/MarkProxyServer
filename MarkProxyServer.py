@@ -7,12 +7,15 @@ import datetime
 
 
 class ServerForRequest:
-	def __init__(self, app, listen_endpoint, target_URL, body_type, log_file=None, config=None):
+	def __init__(self, app, listen_endpoint, target_URL, body_type, param_json=None, log_file=None, config=None):
 		self.app = app
 		self._listen_endpoint = listen_endpoint
 		self._target_URL = target_URL
 		self.config = config
 		self.body_type = body_type
+		self.param_json = param_json
+		if param_json is not None:
+			self.parameters = json.loads(param_json)
 		self.log_file = log_file
 		
 		self._register_route()
@@ -77,6 +80,10 @@ class ServerForRequest:
 				)
 				#логика для XML - удаление лишних сегментов, если это нужно
 
+		if self.log_file is not None:
+			self.log("===ORIGINAL_REQUEST")
+			self.log(request.data)
+
 		#Отправка на целевой сервер
 		response = requests.post(
 			self._target_URL,
@@ -99,6 +106,7 @@ test_server = ServerForRequest(
 	listen_endpoint="/integration/request/mark",
 	target_URL="http://10.254.3.8:8820/integration/request/mark",
 	body_type="json",
+	param_json = '{"need_changes":"Y","segments":[{"id":"01","length_type":"F","length":14,"cut":0},{"id":"11","length_type":"F","length":6,"cut":0},{"id":"21","length_type":"V","length":0,"cut":1},{"id":"91","length_type":"F","length":6,"cut":1},{"id":"92","length_type":"F","length":6,"cut":1},{"id":"93","length_type":"F","length":6,"cut":1},{"id":"3103","length_type":"F","length":6,"cut":1}]}',
 	log_file="log.txt"
 )
 
@@ -106,6 +114,7 @@ test_server2 = ServerForRequest(
 	app=app,
 	listen_endpoint="/integration/request/check_mark_info",
 	target_URL="http://10.254.3.8:8820/integration/request/mark",
+	param_json = '{"need_changes":"Y","segments":[{"id":"01","length_type":"F","length":14,"cut":0},{"id":"11","length_type":"F","length":6,"cut":0},{"id":"21","length_type":"V","length":0,"cut":1},{"id":"91","length_type":"F","length":6,"cut":1},{"id":"92","length_type":"F","length":6,"cut":1},{"id":"93","length_type":"F","length":6,"cut":1},{"id":"3103","length_type":"F","length":6,"cut":1}]}',
 	body_type="xml")
 
 #Запуск приложения
