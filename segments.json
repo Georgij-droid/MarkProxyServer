@@ -1,0 +1,48 @@
+{
+	"need_changes": "Y",
+    "segments":
+    [
+        {
+            "id": "01",
+            "length_type": "F",
+            "length": 14,
+            "cut": 0
+        },
+        {
+            "id": "11",
+            "length_type": "F",
+            "length": 6,
+            "cut": 0
+        },
+        {
+            "id": "21",
+            "length_type": "V",
+            "length": 0,
+            "cut": 1
+        },
+        {
+            "id": "91",
+            "length_type": "F",
+            "length": 6,
+            "cut": 1
+        },
+        {
+            "id": "92",
+            "length_type": "F",
+            "length": 6,
+            "cut": 1
+        },
+        {
+            "id": "93",
+            "length_type": "F",
+            "length": 6,
+            "cut": 1
+        },
+        {
+            "id": "3103",
+            "length_type": "F",
+            "length": 6,
+            "cut": 1
+        }
+    ]
+}
