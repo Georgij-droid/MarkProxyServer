@@ -164,7 +164,7 @@ test_server2 = ServerForRequest(
 
 #Запуск приложения
 if __name__ == "__main__":
-	IP = "10.139.4.167"
+	IP = "127.0.0.1"
 	port = 24100
 	print("Server started at " + str(IP) + ":" + str(port))
 	serve(app, host=IP, port=port, threads=8)
