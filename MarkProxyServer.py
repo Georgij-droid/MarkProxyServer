@@ -4,6 +4,7 @@ import json
 from waitress import serve
 import xml.etree.ElementTree as ET
 import datetime
+import os.path
 
 
 class ServerForRequest:
@@ -165,13 +166,37 @@ class ServerForRequest:
 		if self.log_file is not None:
 			self.log("===RESPONSE===")
 			#self.log(response.headers)
-			self.log(response.content)
+			self.log(response.content.decode('utf-8'))
 
 		#Возврат ответа клиенту
 		return Response(
 			response.content,
 			status=response.status_code,
 			content_type=response.headers.get("Content-Type", "application/json")) #проверить, всегда ли JSON в ответе - возможно, XML
+
+class ConfigHandler:
+	def __init__(self, num):
+		#self.mark_proxy_server = mark_proxy_server
+		self.num = num
+		self.get_config_from_file(num)
+
+	def get_config_from_file(self, num):
+		path_conf = 'XMLConfig_for_proxy.xml'
+		if os.path.isfile(path_conf):
+			try:
+				tree = ET.parse(path_conf)
+			except:
+				return '{"need_changes":"Y","segments":[]}'
+			root = tree.getroot() #определяем корневой элемент
+			target = tree.find('Server[0]')
+			if target != None:
+				logging = target.find('Logging')
+				return logging.text
+			else:
+				return 0
+		else:
+			return '{"need_changes":"Y","segments":[]}'
+
 
 
 app = Flask(__name__)
@@ -182,7 +207,7 @@ test_server = ServerForRequest(
 	target_URL="http://10.254.3.8:8820",
 	body_type="json",
 	param_json = '{"need_changes":"Y","segments":[{"id":"01","length_type":"F","length":14,"cut":0},{"id":"11","length_type":"F","length":6,"cut":0},{"id":"21","length_type":"V","length":0,"cut":0},{"id":"91","length_type":"F","length":6,"cut":1},{"id":"92","length_type":"F","length":6,"cut":1},{"id":"93","length_type":"F","length":6,"cut":1},{"id":"3103","length_type":"F","length":6,"cut":1}]}',
-	log_file="log.txt"
+	log_file="log_json.txt"
 )
 
 test_server2 = ServerForRequest(
@@ -191,11 +216,17 @@ test_server2 = ServerForRequest(
 	target_URL="http://10.254.3.8:8820",
 	param_json = '{"need_changes":"Y","segments":[{"id":"01","length_type":"F","length":14,"cut":0},{"id":"11","length_type":"F","length":6,"cut":0},{"id":"21","length_type":"V","length":0,"cut":0},{"id":"91","length_type":"F","length":6,"cut":1},{"id":"92","length_type":"F","length":6,"cut":1},{"id":"93","length_type":"F","length":6,"cut":1},{"id":"3103","length_type":"F","length":6,"cut":1}]}',
 	body_type="xml",
-	log_file="log_xml.txt")
+	log_file="log_xml.txt"
+)
+
+#"log_json.txt"
+#"log_xml.txt"
 
 #Запуск приложения
 if __name__ == "__main__":
 	IP = "10.139.4.167"
 	port = 24100
 	print("Server started at " + str(IP) + ":" + str(port))
+	config = ConfigHandler(1)
+	print(config.get_config_from_file(1))
 	serve(app, host=IP, port=port, threads=8)
