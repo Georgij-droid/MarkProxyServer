@@ -1,9 +1,69 @@
 <MarkProxyServerConfig>
 	<Server>
 		<Logging>On</Logging>
-		<LogFile>log.txt</LogFile>
+		<LogFile>log_json</LogFile>
 		<BodyType>json</BodyType>
 		<ListenEndpoint>/integration/request/mark</ListenEndpoint>
+		<TargetURL>http://10.254.3.8:8820</TargetURL>
+		<Segments>
+			<NeedChanges>Y</NeedChanges>
+			<SegmentsForParser>
+				<SegmentForParser>
+					<Id>01</Id>
+					<LengthType>F</LengthType>
+					<Length>14</Length>
+					<Cut>0</Cut>
+				</SegmentForParser>
+				<SegmentForParser>
+					<Id>11</Id>
+					<LengthType>F</LengthType>
+					<Length>6</Length>
+					<Cut>0</Cut>
+				</SegmentForParser>
+				<SegmentForParser>
+					<Id>17</Id>
+					<LengthType>F</LengthType>
+					<Length>6</Length>
+					<Cut>0</Cut>
+				</SegmentForParser>
+				<SegmentForParser>
+					<Id>21</Id>
+					<LengthType>V</LengthType>
+					<Length>0</Length>
+					<Cut>0</Cut>
+				</SegmentForParser>
+				<SegmentForParser>
+					<Id>91</Id>
+					<LengthType>F</LengthType>
+					<Length>6</Length>
+					<Cut>1</Cut>
+				</SegmentForParser>
+				<SegmentForParser>
+					<Id>92</Id>
+					<LengthType>F</LengthType>
+					<Length>6</Length>
+					<Cut>1</Cut>
+				</SegmentForParser>
+				<SegmentForParser>
+					<Id>93</Id>
+					<LengthType>F</LengthType>
+					<Length>6</Length>
+					<Cut>1</Cut>
+				</SegmentForParser>
+				<SegmentForParser>
+					<Id>3103</Id>
+					<LengthType>F</LengthType>
+					<Length>6</Length>
+					<Cut>1</Cut>
+				</SegmentForParser>
+			</SegmentsForParser>
+		</Segments>
+	</Server>
+	<Server>
+		<Logging>On</Logging>
+		<LogFile>log_xml</LogFile>
+		<BodyType>xml</BodyType>
+		<ListenEndpoint>/integration/request/check_mark_info</ListenEndpoint>
 		<TargetURL>http://10.254.3.8:8820</TargetURL>
 		<Segments>
 			<NeedChanges>Y</NeedChanges>

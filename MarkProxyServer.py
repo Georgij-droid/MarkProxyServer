@@ -175,58 +175,104 @@ class ServerForRequest:
 			content_type=response.headers.get("Content-Type", "application/json")) #проверить, всегда ли JSON в ответе - возможно, XML
 
 class ConfigHandler:
-	def __init__(self, num):
-		#self.mark_proxy_server = mark_proxy_server
+	def __init__(self, app, num):
+		self.app = app
 		self.num = num
-		self.get_config_from_file(num)
+		self.servers=[] #атрибут для сохранения созданных серверов в виде списка
+		self.load_XML_from_file('XMLConfig_for_proxy.xml')
 
-	def get_config_from_file(self, num):
-		path_conf = 'XMLConfig_for_proxy.xml'
-		if os.path.isfile(path_conf):
+	def load_XML_from_file(self, file_path):
+		if os.path.isfile(file_path):
 			try:
-				tree = ET.parse(path_conf)
+				tree = ET.parse(file_path)
+				root = tree.getroot() #определяем корневой элемент в XML
+				i = 1 #начинаем с первой группы элементов Server
+				for child in root:
+					if child.tag == 'Server':
+						self.parse_config(i, tree)
+						i = i + 1
 			except:
-				return '{"need_changes":"Y","segments":[]}'
-			root = tree.getroot() #определяем корневой элемент
-			target = tree.find('Server[0]')
-			if target != None:
-				logging = target.find('Logging')
-				return logging.text
-			else:
-				return 0
+				server = ServerForRequest(
+					app=self.app,
+					listen_endpoint="/integration/request/check_mark_info",
+					target_URL="http://10.254.3.8:8820",
+					param_json = '{"need_changes":"Y","segments":[{"id":"01","length_type":"F","length":14,"cut":0},{"id":"11","length_type":"F","length":6,"cut":0},{"id":"21","length_type":"V","length":0,"cut":0},{"id":"91","length_type":"F","length":6,"cut":1},{"id":"92","length_type":"F","length":6,"cut":1},{"id":"93","length_type":"F","length":6,"cut":1},{"id":"3103","length_type":"F","length":6,"cut":1}]}',
+					body_type="xml",
+					log_file="log_xml.txt"
+				)
+				self.servers.append(server) #сохраняем созданный сервер - чтобы он не "помер"
 		else:
-			return '{"need_changes":"Y","segments":[]}'
+			server = ServerForRequest(
+				app=self.app,
+				listen_endpoint="/integration/request/check_mark_info",
+				target_URL="http://10.254.3.8:8820",
+				param_json = '{"need_changes":"Y","segments":[{"id":"01","length_type":"F","length":14,"cut":0},{"id":"11","length_type":"F","length":6,"cut":0},{"id":"21","length_type":"V","length":0,"cut":0},{"id":"91","length_type":"F","length":6,"cut":1},{"id":"92","length_type":"F","length":6,"cut":1},{"id":"93","length_type":"F","length":6,"cut":1},{"id":"3103","length_type":"F","length":6,"cut":1}]}',
+				body_type="xml",
+				log_file="log_xml.txt"
+			)
+			self.servers.append(server) #сохраняем созданный сервер - чтобы он не "помер"
 
+	def parse_config(self, num, XML=None):
+		tree = XML
+		root = tree.getroot() #определяем корневой элемент
+		xpath = f'.//Server[{num}]'
+		target = tree.find(xpath)
+		if target != None:
+			#Определяем параметры для сервера
+			logging = target.find('Logging') #еобходимость логирования
+			listen_endpoint = str(target.find('ListenEndpoint').text) #endpoint
+			target_URL = str(target.find('TargetURL').text) #URL конечного сервера
+			body_type = str(target.find('BodyType').text) #тип данных в теле - JSON или XML
+			if logging.text == "On": #Если логирование включено
+				log_file = str(target.find('LogFile').text) + ".txt" #определяем имя файла для логов
+			else:
+				log_file = None
+			dict_segm = {} #JSON начинается с пустого значения
+			need_changes = str(target.find('.//NeedChanges').text)
+			segm_data = []
+			#dict_segm.append({"need_changes": need_changes, "segments": segm_data})
+			dict_segm = {"need_changes": need_changes, "segments": segm_data}
+			for child in target:
+				if child.tag == 'Segments':
+					for child2 in child:
+						if child2.tag == 'SegmentsForParser':
+							for child3 in child2:
+								if child3.tag == 'SegmentForParser':
+									Id = str(child3.find('Id').text)
+									LengthType = str(child3.find('LengthType').text)
+									Length = int(child3.find('Length').text)
+									Cut = int(child3.find('Cut').text)
+									segm_data.append({"cut": Cut, "id": Id, "length": Length, "length_type": LengthType})
+			result_json = json.dumps(dict_segm, ensure_ascii=False)
+			#Получив всё необходимое - создаём сервер с заданными настройками
+			server = ServerForRequest(
+				app=self.app, #Приложение получаем извне класса (входящий параметр)
+				listen_endpoint=listen_endpoint, #listen_endpoint (и все прочие параметры) берём из XML
+				target_URL=target_URL, #аналогично listen_endpoint
+				body_type=body_type, #аналогично listen_endpoint
+				param_json=result_json, #JSON используем тот, который сами сгенерировали - из данных XML
+				log_file=log_file #log_file берём тоже из XML
+				)
+			self.servers.append(server) #сохраняем созданный сервер - чтобы он не "помер"
+		else:
+			server = ServerForRequest(
+				app=self.app,
+				listen_endpoint="/integration/request/check_mark_info",
+				target_URL="http://10.254.3.8:8820",
+				param_json = '{"need_changes":"Y","segments":[{"id":"01","length_type":"F","length":14,"cut":0},{"id":"11","length_type":"F","length":6,"cut":0},{"id":"21","length_type":"V","length":0,"cut":0},{"id":"91","length_type":"F","length":6,"cut":1},{"id":"92","length_type":"F","length":6,"cut":1},{"id":"93","length_type":"F","length":6,"cut":1},{"id":"3103","length_type":"F","length":6,"cut":1}]}',
+				body_type="xml",
+				log_file="log_xml.txt"
+			)
+			self.servers.append(server) #сохраняем созданный сервер - чтобы он не "помер"
 
 
 app = Flask(__name__)
 
-test_server = ServerForRequest(
-	app=app,
-	listen_endpoint="/integration/request/mark",
-	target_URL="http://10.254.3.8:8820",
-	body_type="json",
-	param_json = '{"need_changes":"Y","segments":[{"id":"01","length_type":"F","length":14,"cut":0},{"id":"11","length_type":"F","length":6,"cut":0},{"id":"21","length_type":"V","length":0,"cut":0},{"id":"91","length_type":"F","length":6,"cut":1},{"id":"92","length_type":"F","length":6,"cut":1},{"id":"93","length_type":"F","length":6,"cut":1},{"id":"3103","length_type":"F","length":6,"cut":1}]}',
-	log_file="log_json.txt"
-)
-
-test_server2 = ServerForRequest(
-	app=app,
-	listen_endpoint="/integration/request/check_mark_info",
-	target_URL="http://10.254.3.8:8820",
-	param_json = '{"need_changes":"Y","segments":[{"id":"01","length_type":"F","length":14,"cut":0},{"id":"11","length_type":"F","length":6,"cut":0},{"id":"21","length_type":"V","length":0,"cut":0},{"id":"91","length_type":"F","length":6,"cut":1},{"id":"92","length_type":"F","length":6,"cut":1},{"id":"93","length_type":"F","length":6,"cut":1},{"id":"3103","length_type":"F","length":6,"cut":1}]}',
-	body_type="xml",
-	log_file="log_xml.txt"
-)
-
-#"log_json.txt"
-#"log_xml.txt"
-
 #Запуск приложения
 if __name__ == "__main__":
-	IP = "10.139.4.167"
+	IP = "127.0.0.1"
 	port = 24100
 	print("Server started at " + str(IP) + ":" + str(port))
-	config = ConfigHandler(1)
-	print(config.get_config_from_file(1))
+	config = ConfigHandler(app, 1)
+	#print(config.get_config_from_file(1))
 	serve(app, host=IP, port=port, threads=8)
