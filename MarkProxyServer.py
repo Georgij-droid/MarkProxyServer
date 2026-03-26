@@ -5,6 +5,7 @@ from waitress import serve
 import xml.etree.ElementTree as ET
 import datetime
 import os.path
+import re
 
 
 class ServerForRequest:
@@ -47,10 +48,13 @@ class ServerForRequest:
 		json_dict = json.loads(dict)
 		if json_dict['need_changes'] == "N":
 			return mark
+		#mark = mark.replace('&#x1D', chr(29)) #заменяем кракозябры на пробел - для парсинга
 		elements_array = json_dict["segments"]
+		element_num = 1 #начинаем с первого элемента. Подсчёт элементов нужен для понимания, что процесс завершён
 		new_mark = ''
-		est_mark = mark
+		est_mark = mark.replace('&#x1D', chr(29)) #заменяем кракозябры на пробел - для парсинга
 		for item in elements_array:
+			segm_found = False #инициализация переменной
 			segm_pre_symb = ''
 			segm_code = est_mark[:len(item['id'])]
 			if est_mark[:1] == chr(29):
@@ -93,9 +97,11 @@ class ServerForRequest:
 				est_mark = est_mark[len(segm_value):]
 						
 			#Если не удалось найти ни одного сегмента - выдаём марку в неизменном виде	
-			if segm_found ==False:
+			if segm_found ==False and element_num == len(elements_array):
 				return mark
 
+		new_mark = new_mark.replace(chr(29), '&#x1D')
+		new_mark = new_mark.replace(' ', '&#x1D')
 		return(new_mark)
 
 	def _handle_request(self):
@@ -117,22 +123,34 @@ class ServerForRequest:
 				)
 			#логика для JSON - удаление лишних сегментов, если это нужно
 			json_data = json.loads(request.data)
-			mark = json_data['uitu']
+			if 'uit' in json_data:
+				mark = json_data['uit'] #марка - это uit, а не uitu (uitu - это короб)
+			else:
+				mark = None
 			if self.log_file is not None:
 				self.log("===ORIGINAL_REQUEST")
-				self.log(request.data.decode('utf-8'))
-			json_data['uitu'] = self.parser(mark, self.param_json)
+				if self.body_type == 'json':
+					try:
+						json_data = json.loads(request.data)
+						self.log(json.dumps(json_data, ensure_ascii = False))
+					except:
+						self.log(request.data.decode('utf-8'))
+				else:
+					self.log(request.data.decode('utf-8'))
+			if mark is not None:
+				json_data['uit'] = self.parser(mark, self.param_json)
 			new_data = json.dumps(json_data)
 			#Логирование изменённого запроса в Хотту
 			if self.log_file is not None:
 				self.log("===CHANGED REQUEST")
 				#self.log(self._target_URL)
-				self.log(json_data)
+				self.log(json.dumps(json_data, ensure_ascii = False))
 		elif self.body_type == "xml":
 			xml_data = request.data.decode('utf-8')
 			if self.log_file is not None:
 				self.log("===ORIGINAL_REQUEST")
-				self.log(xml_data)
+				xml_data_for_log = re.sub(r'>\s+<', '><', xml_data.strip())
+				self.log(xml_data_for_log)
 			if not self.is_XML(xml_data):
 				if self.log_file is not None:
 					self.log("ERROR: Request is not XML")
@@ -144,15 +162,18 @@ class ServerForRequest:
 			#логика для XML - удаление лишних сегментов, если это нужно
 			root = ET.fromstring(xml_data)
 			mark_element = root.find('.//mark')
-			mark = mark_element.text
-			mark_element.text = self.parser(mark, self.param_json)
+			#print(self.param_json)
+			if mark_element is not None:
+				mark = mark_element.text
+				mark_element.text = self.parser(mark, self.param_json)
 			xml_data = ET.tostring(root, encoding='unicode', method='xml', xml_declaration=True)
 			new_data = xml_data.encode('utf-8')
+			#xml_data2 = new_data.decode('utf-8')
 			#Логирование изменённого запроса в Хотту
 			if self.log_file is not None:
 				self.log("===CHANGED REQUEST")
-				#self.log(self._target_URL)
-				self.log(xml_data)
+				xml_data_for_log = re.sub(r'>\s+<', '><', xml_data.strip())
+				self.log(xml_data_for_log)
 
 		#Отправка на целевой сервер
 		response = requests.post(
@@ -175,9 +196,8 @@ class ServerForRequest:
 			content_type=response.headers.get("Content-Type", "application/json")) #проверить, всегда ли JSON в ответе - возможно, XML
 
 class ConfigHandler:
-	def __init__(self, app, num):
+	def __init__(self, app):
 		self.app = app
-		self.num = num
 		self.servers=[] #атрибут для сохранения созданных серверов в виде списка
 		self.load_XML_from_file('XMLConfig_for_proxy.xml')
 
@@ -271,8 +291,8 @@ app = Flask(__name__)
 #Запуск приложения
 if __name__ == "__main__":
 	IP = "127.0.0.1"
+	#IP = "10.139.4.167"
 	port = 24100
 	print("Server started at " + str(IP) + ":" + str(port))
-	config = ConfigHandler(app, 1)
-	#print(config.get_config_from_file(1))
+	config = ConfigHandler(app)
 	serve(app, host=IP, port=port, threads=8)

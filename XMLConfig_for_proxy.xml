@@ -35,19 +35,19 @@
 				<SegmentForParser>
 					<Id>91</Id>
 					<LengthType>F</LengthType>
-					<Length>6</Length>
+					<Length>4</Length>
 					<Cut>1</Cut>
 				</SegmentForParser>
 				<SegmentForParser>
 					<Id>92</Id>
 					<LengthType>F</LengthType>
-					<Length>6</Length>
+					<Length>88</Length>
 					<Cut>1</Cut>
 				</SegmentForParser>
 				<SegmentForParser>
 					<Id>93</Id>
 					<LengthType>F</LengthType>
-					<Length>6</Length>
+					<Length>4</Length>
 					<Cut>1</Cut>
 				</SegmentForParser>
 				<SegmentForParser>
@@ -95,19 +95,19 @@
 				<SegmentForParser>
 					<Id>91</Id>
 					<LengthType>F</LengthType>
-					<Length>6</Length>
+					<Length>4</Length>
 					<Cut>1</Cut>
 				</SegmentForParser>
 				<SegmentForParser>
 					<Id>92</Id>
 					<LengthType>F</LengthType>
-					<Length>6</Length>
+					<Length>88</Length>
 					<Cut>1</Cut>
 				</SegmentForParser>
 				<SegmentForParser>
 					<Id>93</Id>
 					<LengthType>F</LengthType>
-					<Length>6</Length>
+					<Length>4</Length>
 					<Cut>1</Cut>
 				</SegmentForParser>
 				<SegmentForParser>
