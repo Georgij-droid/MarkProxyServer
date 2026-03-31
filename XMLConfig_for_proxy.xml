@@ -1,5 +1,8 @@
 <MarkProxyServerConfig>
+	<IP>127.0.0.1</IP>
+	<port>24100</port>
 	<Server>
+		<mark_element>uit</mark_element>
 		<Logging>On</Logging>
 		<LogFile>log_json</LogFile>
 		<BodyType>json</BodyType>
@@ -60,6 +63,7 @@
 		</Segments>
 	</Server>
 	<Server>
+		<mark_element>mark</mark_element>
 		<Logging>On</Logging>
 		<LogFile>log_xml</LogFile>
 		<BodyType>xml</BodyType>
