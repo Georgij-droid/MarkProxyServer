@@ -7,6 +7,7 @@ import datetime
 import os.path
 import re
 from typing import Tuple
+from urllib.parse import urljoin
 
 #Класс для создания сервера
 class ServerForRequest:
@@ -15,7 +16,7 @@ class ServerForRequest:
 		#Сохраняем полученные атрибуты
 		self.app = app
 		self._listen_endpoint = listen_endpoint
-		self._target_URL = target_URL + listen_endpoint #целевой адрес состоит из URL и endpoint
+		self._target_URL = urljoin(target_URL, listen_endpoint) #целевой адрес состоит из URL и endpoint - склеиваем специальным методом
 		self.config = config
 		self.body_type = body_type
 		self.mark_element = mark_element
