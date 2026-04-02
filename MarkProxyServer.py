@@ -242,7 +242,7 @@ class ServerForRequest:
 
 class ConfigHandler:
 	#Объявляем константы для сервера по умолчанию (если не удалось получить параметры из XML-конфигурации)
-	DEFAULT_ENDPOINT = "/integration/request/check_mark_info"
+	DEFAULT_ENDPOINT = "/integration/request/check_mark_info" #используется только в случаях, если не удалось получить ни для одного сервера - тогда откроется сервер по умолчанию
 	DEFAULT_TARGET_URL = "http://10.254.3.8:8820"
 	DEFAULT_PARAM_JSON = '{"need_changes":"Y","segments":[{"id":"01","length_type":"F","length":14,"cut":0},{"id":"11","length_type":"F","length":6,"cut":0},{"id":"21","length_type":"V","length":0,"cut":0},{"id":"91","length_type":"F","length":4,"cut":1},{"id":"92","length_type":"F","length":88,"cut":1},{"id":"93","length_type":"F","length":4,"cut":1},{"id":"3103","length_type":"F","length":6,"cut":1}]}'
 	DEFAULT_BODY_TYPE = "xml"
@@ -308,8 +308,15 @@ class ConfigHandler:
 			for child in root:
 				#для каждой группы элементов Server создаём свой сервер с заданными параметрами
 				if child.tag == 'Server':
+					servers_qty = len(self.servers) #фиксируем в переменную количество уже созданных серверов
 					self.parse_config(i, tree) #создаём с помощью специального метода
-					i = i + 1
+					#Проверяем, добавился ли новый сервер после вызова метода
+					if servers_qty == len(self.servers): 
+						#если не добавился - удаляем остальные сервера прекращаем выполнение метода
+						self.servers.clear()
+						break
+					else:
+						i = i + 1
 
 	#Метод для получения из конфига параметров сокета - IP и порта
 	def get_socket(self):
@@ -343,15 +350,27 @@ class ConfigHandler:
 		if target != None:
 			#Определяем параметры для сервера
 			logging = target.find('Logging') #необходимость логирования
-			listen_endpoint = str(target.find('ListenEndpoint').text) #endpoint
-			target_URL = str(target.find('TargetURL').text) #URL конечного сервера
-			body_type = str(target.find('BodyType').text) #тип данных в теле - JSON или XML
-			if logging.text == "On": #Если логирование включено
-				log_file = str(target.find('LogFile').text) + ".txt" #определяем имя файла для логов
+			listen_endpoint_element = target.find('ListenEndpoint')
+			if listen_endpoint_element == None:
+				#input("Не указан endpoint для сервера. Укажите endpoint в конфигурации и повторите попытку")
+				print(f"ОШИБКА: не указан endpoint для сервера {num}")
+				return
 			else:
-				log_file = None #если логирование выключено - не передаём имя файла для логов
+				listen_endpoint = str(target.find('ListenEndpoint').text)
+			target_URL_element = target.find('TargetURL')
+			target_URL = str(target.find('TargetURL').text) if target_URL_element != None else self.DEFAULT_TARGET_URL #URL конечного сервера
+			body_type_element = target.find('BodyType')
+			body_type = str(target.find('BodyType').text) if body_type_element != None else self.DEFAULT_BODY_TYPE #тип данных в теле - JSON или XML
+			if logging != None:
+				if logging.text == "On": #Если логирование включено
+					log_file = str(target.find('LogFile').text) + ".txt" #определяем имя файла для логов
+				else:
+					log_file = None #если логирование выключено - не передаём имя файла для логов
+			else:
+				log_file=self.DEFAULT_LOG_FILE
 			dict_segm = {} #JSON начинается с пустого значения
-			need_changes = str(target.find('.//NeedChanges').text) #находим в конфиге необходимость изменений в марке (для парсера)
+			need_changes_element = target.find('.//NeedChanges') #ищем элемент с необходимостью изменений марки
+			need_changes = str(target.find('.//NeedChanges').text) if need_changes_element != None else "N" #находим в конфиге необходимость изменений в марке (для парсера)
 			segm_data = [] #объявляем массив сегментов - в начале пустой
 			dict_segm = {"need_changes": need_changes, "segments": segm_data} #создаём словарь для передачи парсеру (в нём будут параметры для сервера)
 			#Начинаем поиск данных по сегментам
@@ -359,7 +378,7 @@ class ConfigHandler:
 				#Находим группу элементов Segments
 				if child.tag == 'Segments':
 					for child2 in child:
-						#Находим группу элемнетов SegmentsForParser
+						#Находим группу элементов SegmentsForParser
 						if child2.tag == 'SegmentsForParser':
 							#По дочерним элементам ищем
 							for child3 in child2:
@@ -402,7 +421,13 @@ app = Flask(__name__)
 #Запуск приложения
 if __name__ == "__main__":
 	config = ConfigHandler(app) #создаём экземпляр класса, который получает конфиг и создаёт серверы
-	IP = config.get_socket()[0] #получаем IP из конфига
-	port = config.get_socket()[1] #получаем порт из конфига
-	print("Server started at " + str(IP) + ":" + str(port)) #инфолог о запуске сервера
-	serve(app, host=IP, port=port, threads=8) #создаём сервер
+	#Проверяем, создан ли хотя бы один сервер
+	if len(config.servers) > 0:
+		#Если сервера есть - то начинаем случать IP и порт, чтобы начать получать сообщения
+		IP = config.get_socket()[0] #получаем IP из конфига
+		port = config.get_socket()[1] #получаем порт из конфига
+		print("Server started at " + str(IP) + ":" + str(port)) #инфолог о запуске сервера
+		serve(app, host=IP, port=port, threads=8) #создаём сервер
+	else:
+		input("Не указан endpoint для сервера. Нажмите Enter для закрытия окна. Затем укажите endpoint в конфигурации и повторите попытку")
+
